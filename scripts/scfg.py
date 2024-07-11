@@ -120,11 +120,11 @@ class SCFGExtensionScript(UIWrapper):
 
         # Setup menu ui detail
         def setup_ui(self, is_img2img) -> list:
-                with gr.Accordion('S-CFG', open=False):
+                with gr.Accordion('S-CFG', open=True):
                         active = gr.Checkbox(value=False, default=False, label="Active", elem_id='scfg_active', info="Computationally expensive. A batch size of 4 for 1024x1024 will max out a 24GB card!")
                         with gr.Row():
                                 scfg_scale = gr.Slider(value = 1.0, minimum = 0, maximum = 10.0, step = 0.1, label="SCFG Scale", elem_id = 'scfg_scale', info="")
-                                scfg_r = gr.Slider(value = 4, minimum = 1, maximum = 16, step = 1, label="SCFG R", elem_id = 'scfg_r', info="Scale factor. Greater R uses more memory.")
+                                scfg_r = gr.Slider(value = 8, minimum = 1, maximum = 16, step = 1, label="SCFG R", elem_id = 'scfg_r', info="Scale factor. Greater R uses more memory.")
                         with gr.Row():
                                 scfg_rate_min = gr.Slider(value = 0.8, minimum = 0, maximum = 30.0, step = 0.1, label="Min Rate", elem_id = 'scfg_rate_min', info="")
                                 scfg_rate_max = gr.Slider(value = 3.0, minimum = 0, maximum = 30.0, step = 0.1, label="Max Rate", elem_id = 'scfg_rate_max', info="")
@@ -132,6 +132,8 @@ class SCFGExtensionScript(UIWrapper):
                         with gr.Row():
                                 start_step = gr.Slider(value = 0, minimum = 0, maximum = 150, step = 1, label="Start Step", elem_id = 'scfg_start_step', info="")
                                 end_step = gr.Slider(value = 150, minimum = 0, maximum = 150, step = 1, label="End Step", elem_id = 'scfg_end_step', info="")
+                                ratio = gr.Slider(value = 0.5, minimum = 0, maximum = 1, step = 0.05, label="Ratio", elem_id = 'scfg_ratio', info="")
+
                                 
                 active.do_not_save_to_config = True
                 scfg_scale.do_not_save_to_config = True
@@ -141,6 +143,8 @@ class SCFGExtensionScript(UIWrapper):
                 scfg_r.do_not_save_to_config = True
                 start_step.do_not_save_to_config = True
                 end_step.do_not_save_to_config = True
+                ratio.do_not_save_to_config = True
+
 
                 self.infotext_fields = [
                         (active, lambda d: gr.Checkbox.update(value='SCFG Active' in d)),
@@ -151,6 +155,8 @@ class SCFGExtensionScript(UIWrapper):
                         (start_step, 'SCFG Start Step'),
                         (end_step, 'SCFG End Step'),
                         (scfg_r, 'SCFG R'),
+                        (ratio, 'SCFG Ratio'),
+
                 ]
                 self.paste_field_names = [
                         'scfg_active',
@@ -160,14 +166,15 @@ class SCFGExtensionScript(UIWrapper):
                         'scfg_rate_clamp',
                         'scfg_start_step',
                         'scfg_end_step',
+                        'scfg_ratio',
                         'scfg_r',
                 ]
-                return [active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, scfg_r]
+                return [active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, ratio, scfg_r]
 
         def process_batch(self, p: StableDiffusionProcessing, *args, **kwargs):
                self.pag_process_batch(p, *args, **kwargs)
 
-        def pag_process_batch(self, p: StableDiffusionProcessing, active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, scfg_r, *args, **kwargs):
+        def pag_process_batch(self, p: StableDiffusionProcessing, active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, ratio, scfg_r, *args, **kwargs):
                 # cleanup previous hooks always
                 script_callbacks.remove_current_script_callbacks()
                 self.remove_all_hooks()
@@ -181,6 +188,7 @@ class SCFGExtensionScript(UIWrapper):
                 scfg_rate_clamp = getattr(p, "scfg_rate_clamp", scfg_rate_clamp)
                 start_step = getattr(p, "scfg_start_step", start_step)
                 end_step = getattr(p, "scfg_end_step", end_step)
+                ratio = getattr(p, "scfg_ratio", ratio)
                 scfg_r = getattr(p, "scfg_r", scfg_r)
 
                 p.extra_generation_params.update({
@@ -191,11 +199,12 @@ class SCFGExtensionScript(UIWrapper):
                         "SCFG Rate Clamp": scfg_rate_clamp,
                         "SCFG Start Step": start_step,
                         "SCFG End Step": end_step,
+                        "SCFG Ratio": ratio,
                         "SCFG R": scfg_r,
                 })
-                self.create_hook(p, active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, scfg_r)
+                self.create_hook(p, active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, ratio, scfg_r)
 
-        def create_hook(self, p: StableDiffusionProcessing, active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, scfg_r):
+        def create_hook(self, p: StableDiffusionProcessing, active, scfg_scale, scfg_rate_min, scfg_rate_max, scfg_rate_clamp, start_step, end_step, ratio, scfg_r):
                 # Create a list of parameters for each concept
                 scfg_params = SCFGStateParams()
 
@@ -213,6 +222,7 @@ class SCFGExtensionScript(UIWrapper):
                 scfg_params.rate_clamp = scfg_rate_clamp
                 scfg_params.start_step = start_step
                 scfg_params.end_step = end_step
+                scfg_params.ratio = ratio
                 scfg_params.R = scfg_r
                 scfg_params.height = p.height
                 scfg_params.width = p.width
@@ -342,7 +352,8 @@ class SCFGExtensionScript(UIWrapper):
                 
                 """
                 scfg_params.current_step = params.sampling_step
-
+                scfg_params.end_step = scfg_params.ratio * params.total_sampling_steps
+                
                 # Run only within interval
                 if not scfg_params.start_step <= params.sampling_step <= scfg_params.end_step:
                         return
@@ -379,6 +390,7 @@ class SCFGExtensionScript(UIWrapper):
                         xyz_grid.AxisOption("[SCFG] SCFG Rate Clamp", float, scfg_apply_field("scfg_rate_clamp")),
                         xyz_grid.AxisOption("[SCFG] SCFG Start Step", int, scfg_apply_field("scfg_start_step")),
                         xyz_grid.AxisOption("[SCFG] SCFG End Step", int, scfg_apply_field("scfg_end_step")),
+                        xyz_grid.AxisOption("[SCFG] SCFG Ratio", int, scfg_apply_field("scfg_ratio")),
                         xyz_grid.AxisOption("[SCFG] SCFG R", int, scfg_apply_field("scfg_r")),
                 }
                 return extra_axis_options
