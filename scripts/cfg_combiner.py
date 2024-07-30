@@ -189,6 +189,8 @@ def combine_denoised_pass_conds_list(*args, **kwargs):
                         if not pag_active:
                                 pass
                         # Not within step interval? 
+                        elif not pag_params.pag_start_step <= pag_params.step <= pag_params.pag_end_step:
+                                pass
                         # Scale is zero?
                         elif pag_scale <= 0:
                                 pass

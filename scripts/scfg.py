@@ -352,9 +352,12 @@ class SCFGExtensionScript(UIWrapper):
                 
                 """
                 scfg_params.current_step = params.sampling_step
-                scfg_params.end_step = scfg_params.ratio * params.total_sampling_steps
-                
+
                 # Run only within interval
+                scfg_params.scfg_scale = 1
+                if scfg_params.ratio * params.total_sampling_steps <= params.sampling_step:
+                       scfg_params.scfg_scale = 0
+                       return
                 if not scfg_params.start_step <= params.sampling_step <= scfg_params.end_step:
                         return
                 
