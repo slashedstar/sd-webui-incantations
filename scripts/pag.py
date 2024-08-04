@@ -157,9 +157,9 @@ class PAGExtensionScript(UIWrapper):
         def setup_ui(self, is_img2img) -> list:
                 with gr.Accordion('Perturbed Attention Guidance', open=True):
                         active = gr.Checkbox(value=False, default=False, label="Active", elem_id='pag_active')
-                        pag_sanf = gr.Checkbox(value=False, default=True, label="Use Saliency-Adaptive Noise Fusion", elem_id='pag_sanf')
+                        pag_sanf = gr.Checkbox(value=False, default=False, label="Use Saliency-Adaptive Noise Fusion", elem_id='pag_sanf')
                         with gr.Row():
-                                pag_scale = gr.Slider(value = 3, minimum = 0, maximum = 20.0, step = 0.5, label="PAG Scale", elem_id = 'pag_scale', info="")
+                                pag_scale = gr.Slider(value = 5, minimum = 0, maximum = 20.0, step = 0.5, label="PAG Scale", elem_id = 'pag_scale', info="")
                         with gr.Row():
                                 start_step = gr.Slider(value = 0, minimum = 0, maximum = 150, step = 1, label="Start Step", elem_id = 'pag_start_step', info="")
                                 end_step = gr.Slider(value = 150, minimum = 0, maximum = 150, step = 1, label="End Step", elem_id = 'pag_end_step', info="")
