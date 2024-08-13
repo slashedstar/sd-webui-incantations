@@ -102,7 +102,7 @@ class SEGExtensionScript(UIWrapper):
 
         # Setup menu ui detail
         def setup_ui(self, is_img2img) -> list:
-                with gr.Accordion('Smoothed Energy Guidance', open=False):
+                with gr.Accordion('Smoothed Energy Guidance', open=True):
                         active = gr.Checkbox(value=False, default=False, label="Active", elem_id='seg_active', info="Recommended to keep CFG Scale fixed at 3.0, use Sigma to adjust.")
                         with gr.Row():
                                 seg_blur_sigma = gr.Slider(value = 11.0, minimum = 0.0, maximum = 11.0, step = 0.5, label="SEG Blur Sigma", elem_id = 'seg_blur_sigma', info="Exponential (2^n). Values >= 11 are infinite blur")
